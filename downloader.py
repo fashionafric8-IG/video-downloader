@@ -1,116 +1,135 @@
 import os
 import logging
-import subprocess
 import re
+
 import yt_dlp
+
+def _is_valid_netscape(path):
+    """Check if a cookies file follows the Netscape cookie file format required by yt-dlp.
+    Returns True if the first non‑empty line starts with '# Netscape HTTP Cookie File'.
+    """
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    return line.startswith('# Netscape HTTP Cookie File')
+        return False
+    except Exception:
+        return False
 
 # Use the same logger as app.py
 logger = logging.getLogger(__name__)
+
+def clean_filename(filename):
+    """Removes special characters from filename to avoid filesystem issues."""
+    # Keep alphanumeric, spaces, and common symbols like . [ ] - _
+    # Replace everything else with nothing or underscore
+    return re.sub(r'[^\w\s\.\-\[\]\(\)_]', '', filename).strip()
 
 def get_video_info(url):
     """
     Extracts metadata and available formats for a given video URL.
     Does not download the video.
     """
-    # Use simple options for analysis
-    ydl_opts = {
-        'quiet': True,
-        'no_warnings': True,
-        'skip_download': True,
-    }
-    
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        try:
+    try:
+        ydl_opts = {
+            'quiet': True,
+            'noplaylist': True,
+            'nocheckcertificate': True,
+            'geo_bypass': True,
+            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        }
+
+        # Include cookiefile if a valid cookies.txt exists
+        if os.path.isfile('cookies.txt') and _is_valid_netscape('cookies.txt'):
+            ydl_opts['cookiefile'] = 'cookies.txt'
+        
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
-        except Exception as e:
-            logger.error(f"Failed to extract info for {url}: {e}")
-            return {'error': str(e)}
 
-    # Parse formats
-    formats = []
-    if 'formats' in info:
-        for f in info['formats']:
-            vcodec = f.get('vcodec')
-            acodec = f.get('acodec')
-            
-            # Filter for meaningful formats
-            if vcodec != 'none' or acodec != 'none':
-                # Check if combined (contains both)
-                is_combined = vcodec != 'none' and acodec != 'none'
-                
-                # Format label
-                res = f.get('format_note') or f.get('resolution') or 'Audio'
-                size = f.get('filesize') or f.get('filesize_approx')
-                size_str = f"{round(size / (1024 * 1024), 1)} MB" if size else "Unknown Size"
-                
-                # We prioritize combined formats for the user because ffmpeg is missing
-                formats.append({
-                    'id': f['format_id'],
-                    'ext': f.get('ext', 'mp4'),
-                    'res': res,
-                    'size': size_str,
-                    'combined': is_combined,
-                    'type': 'Video' if vcodec != 'none' else 'Audio'
-                })
+        if not info:
+            return {'error': 'Failed to fetch video information. The IP might be blocked or cookies expired.'}
 
-    return {
-        'title': info.get('title', 'Unknown Title'),
-        'thumbnail': info.get('thumbnail', ''),
-        'duration': info.get('duration_string', ''),
-        'formats': sorted(formats, key=lambda x: (x['combined'], x['res']), reverse=True)
-    }
+        # Parse formats
+        formats = []
+        if isinstance(info, dict) and 'formats' in info:
+            for f in info['formats']:
+                vcodec = f.get('vcodec')
+                acodec = f.get('acodec')
+                
+                # Filter for meaningful formats
+                if vcodec != 'none' or acodec != 'none':
+                    # Check if combined (contains both)
+                    is_combined = vcodec != 'none' and acodec != 'none'
+                    
+                    # Format label
+                    res = f.get('format_note') or f.get('resolution') or 'Audio'
+                    size = f.get('filesize') or f.get('filesize_approx')
+                    size_str = f"{round(size / (1024 * 1024), 1)} MB" if size else "Unknown Size"
+                    
+                    # We prioritize combined formats for the user because ffmpeg is missing
+                    formats.append({
+                        'id': f['format_id'],
+                        'ext': f.get('ext', 'mp4'),
+                        'res': res,
+                        'size': size_str,
+                        'combined': is_combined,
+                        'type': 'Video' if vcodec != 'none' else 'Audio'
+                    })
+
+        # Apply cleaning to the filename derived from info
+        raw_title = info.get('title', 'Unknown Title')
+        cleaned_title = clean_filename(raw_title)
+        
+        return {
+            'title': cleaned_title,
+            'thumbnail': info.get('thumbnail', ''),
+            'duration': info.get('duration_string', ''),
+            'formats': sorted(formats, key=lambda x: (x['combined'], x['res']), reverse=True)
+        }
+    except Exception as e:
+        logger.error(f"ANALYZE ERROR: {str(e)}")
+        return {"error": str(e)}
 
 def download_video(url, format_id, output_dir):
-    """
-    Downloads a video using yt-dlp via subprocess for maximum reliability.
-    Returns the absolute path to the downloaded file.
-    """
+    """Downloads a video using yt_dlp's Python API."""
     os.makedirs(output_dir, exist_ok=True)
     
-    # Path to the yt-dlp executable
-    ytdlp_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'venv', 'Scripts', 'yt-dlp.exe')
-    if not os.path.exists(ytdlp_path):
-        ytdlp_path = 'yt-dlp'
-
-    # Safe filename template
-    # We use %(title).100s to limit title length and %(id)s to ensure uniqueness
-    outtmpl = os.path.join(output_dir, '%(title).100s [%(id)s].%(ext)s')
+    ydl_opts = {
+        'format': format_id if format_id else 'bestvideo*+bestaudio/best',
+        'merge_output_format': 'mp4',
+        'outtmpl': os.path.join(output_dir, '%(title).100s [%(id)s].%(ext)s'),
+        'restrict_filenames': True,
+        'noplaylist': True,
+        'quiet': True,
+        'nocheckcertificate': True,
+        'geo_bypass': True,
+        'max_filesize': 100 * 1024 * 1024,  # Limit to 100MB for VPS safety
+        'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    }
     
-    # Selection logic:
-    # If a specific format_id is provided, use it.
-    # Otherwise, use 'best' (which defaults to best combined without ffmpeg)
-    select_format = format_id if format_id else 'best[ext=mp4]/best'
-    
-    cmd = [
-        ytdlp_path,
-        '-f', select_format,
-        '-o', outtmpl,
-        '--no-warnings',
-        '--restrict-filenames', # Ensures safe filenames for Windows
-        '--print', 'after_move:filepath', # Prints the final path to stdout
-        url
-    ]
-    
-    logger.info(f"Executing: {' '.join(cmd)}")
+    # Cookie Logic
+    if os.path.isfile('cookies.txt') and _is_valid_netscape('cookies.txt'):
+        ydl_opts['cookiefile'] = 'cookies.txt'
     
     try:
-        process = subprocess.run(cmd, capture_output=True, text=True, check=True)
-        # The last non-empty line of stdout should be our path
-        output_lines = [l.strip() for l in process.stdout.split('\n') if l.strip()]
-        if output_lines:
-            final_path = output_lines[-1]
-            if os.path.exists(final_path):
-                logger.info(f"Successfully downloaded: {final_path}")
-                return os.path.abspath(final_path)
-        
-        # Fallback: check the output directory for the most recent file
-        files = [os.path.join(output_dir, f) for f in os.listdir(output_dir) if not f.endswith('.part')]
-        if files:
-            return os.path.abspath(max(files, key=os.path.getmtime))
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=True)
             
-    except subprocess.CalledProcessError as e:
-        logger.error(f"yt-dlp failed: {e.stderr}")
+            # yt_dlp returns the filename in info['requested_downloads'][0]['filepath'] if available
+            if 'requested_downloads' in info and info['requested_downloads']:
+                path = info['requested_downloads'][0].get('filepath')
+                if path and os.path.exists(path):
+                    return os.path.abspath(path)
+            
+            # Fallback: check info['_filename']
+            path = info.get('_filename') or info.get('filename')
+            if path and os.path.exists(path):
+                return os.path.abspath(path)
+                
+            raise RuntimeError("yt-dlp finished but the output file could not be located.")
+            
     except Exception as e:
-        logger.exception(f"Unexpected error in downloader: {e}")
-        
-    return None
+        logger.exception("Download error")
+        raise e
