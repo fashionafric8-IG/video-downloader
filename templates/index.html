@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Downloader | ToolsFlash</title>
+    <meta name="description"
+        content="Premium video downloader from YouTube, Instagram, and TikTok, part of the ToolsFlash suite offering image and PDF utilities.">
+
+    <!-- Premium Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        brand: {
+                            cyan: '#00f2fe',
+                            purple: '#7b61ff',
+                            dark: '#0a0a0a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Font Awesome (keep for existing icons if needed, but we'll use Lucide where possible) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        body {
+            background-color: #0a0a0a;
+            min-height: 100vh;
+        }
+
+        .toolsflash-gradient {
+            background: linear-gradient(135deg, #00f2fe 0%, #7b61ff 100%);
+        }
+
+        .toolsflash-gradient-text {
+            background: linear-gradient(135deg, #00f2fe 0%, #7b61ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.02);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .input-area {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .input-area:hover,
+        .input-area:focus-within {
+            border-color: rgba(0, 242, 254, 0.3);
+            background: rgba(0, 0, 0, 0.4);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #00f2fe 0%, #7b61ff 100%);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(123, 97, 255, 0.4);
+            filter: brightness(1.1);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+
+<body class="text-gray-100 antialiased selection:bg-purple-500/30">
+
+    <!-- Unified ToolsFlash Navbar -->
+
+
+    <div class="w-full max-w-5xl mx-auto pt-16 pb-12 px-6 space-y-12">
+
+        <!-- Hero Section -->
+        <header class="text-center space-y-4">
+            <!-- <div
+                class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-cyan/10 border border-brand-cyan/20 text-[10px] font-bold uppercase tracking-widest text-brand-cyan">
+                <span class="w-1 h-1 bg-brand-cyan rounded-full"></span>
+                High-Speed Stream Engine
+            </div> -->
+            <h1 class="text-4xl md:text-5xl font-serif text-white tracking-tight leading-tight">
+                Video
+                <span class="toolsflash-gradient-text italic font-bold">Downloader</span>
+            </h1>
+            <p class="text-gray-500 text-sm max-w-lg mx-auto font-medium">
+                The fastest way to download high-quality videos from any platform. No ads, no bloat, just the content
+                you love.
+            </p>
+        </header>
+
+        <!-- Search Console -->
+        <div class="glass-panel rounded-3xl p-6 md:p-8 mb-12 shadow-2xl">
+            <div class="flex flex-col md:flex-row gap-4">
+                <div class="relative flex-grow group input-area rounded-2xl overflow-hidden">
+                    <input type="text" id="url-input"
+                        class="w-full bg-transparent py-5 px-6 pl-14 text-white focus:outline-none transition-all placeholder:text-gray-600 text-lg"
+                        placeholder="Paste video link here...">
+                    <i
+                        class="fas fa-link absolute left-6 top-1/2 -translate-y-1/2 text-gray-600 group-focus-within:text-brand-cyan transition-colors"></i>
+                    <button onclick="pasteFromClipboard()"
+                        class="absolute right-4 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-lg bg-white/5 text-gray-500 hover:text-white text-xs font-bold transition-all border border-white/5 uppercase tracking-widest">
+                        Paste
+                    </button>
+                </div>
+                <button id="analyze-btn"
+                    class="btn-primary px-10 py-5 rounded-2xl text-white font-bold text-lg shadow-xl flex items-center justify-center gap-3">
+                    <span>Analyze</span>
+                    <i data-lucide="search" class="w-5 h-5 opacity-70"></i>
+                </button>
+            </div>
+
+            <!-- Error Message -->
+            <div id="error"
+                class="hidden mt-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-center gap-3 animate-pulse">
+                <i class="fas fa-circle-exclamation"></i>
+                <span id="error-msg"></span>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loading" class="hidden flex flex-col items-center py-20 animate-fade-in">
+            <div class="relative">
+                <div class="w-20 h-20 border-4 border-indigo-500/10 border-t-indigo-500 rounded-full animate-spin">
+                </div>
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <i class="fas fa-search text-indigo-400 animate-pulse"></i>
+                </div>
+            </div>
+            <p class="mt-8 text-indigo-300 font-medium tracking-widest uppercase text-xs">Analyzing Server Data...</p>
+        </div>
+
+        <!-- Results Panel -->
+        <div id="results" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-slide-up">
+            <!-- Thumbnail Column -->
+            <div class="lg:col-span-5">
+                <div class="glass-panel rounded-[2rem] overflow-hidden p-3">
+                    <div class="relative aspect-video rounded-2xl overflow-hidden group">
+                        <img id="thumb"
+                            class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                            src="" alt="">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent">
+                        </div>
+                        <div class="absolute bottom-4 left-4 right-4">
+                            <h3 id="title" class="text-lg font-bold line-clamp-2 mb-1">Video Title</h3>
+                            <p id="duration" class="text-indigo-300 text-xs font-bold uppercase tracking-widest"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Formats Column -->
+            <div class="lg:col-span-7 flex flex-col gap-4" id="formats-list">
+                <!-- Formats injected here -->
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <!-- Download Processing Modal -->
+    <div id="download-overlay"
+        class="fixed inset-0 bg-black/95 backdrop-blur-xl z-[100] hidden flex items-center justify-center p-6 transition-all duration-500">
+        <div class="max-w-md w-full text-center">
+            <div id="download-loader" class="relative w-32 h-32 mx-auto mb-12">
+                <div class="absolute inset-0 border-8 border-indigo-500/10 rounded-full"></div>
+                <div class="absolute inset-0 border-8 border-indigo-500 border-t-transparent rounded-full animate-spin">
+                </div>
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <i class="fas fa-cloud-arrow-down text-3xl text-indigo-400 animate-bounce"></i>
+                </div>
+            </div>
+
+            <div id="download-success" class="hidden scale-110 mb-12 transition-all duration-500">
+                <div
+                    class="w-24 h-24 rounded-full bg-green-500/20 text-green-400 flex items-center justify-center mx-auto border-2 border-green-500/30">
+                    <i data-lucide="check" class="w-8 h-8"></i>
+                </div>
+            </div>
+
+            <h2 id="overlay-title" class="text-3xl font-extrabold mb-4 text-white">Preparing Content</h2>
+            <p id="overlay-msg" class="text-gray-500 mb-10 text-lg font-light">Our engine is optimizing the video for
+                your local media player. This ensures a perfect playback experience.</p>
+
+            <div class="flex flex-col gap-4">
+                <a id="final-download-btn" href="#"
+                    class="hidden btn-primary w-full py-5 rounded-2xl text-white font-bold text-xl shadow-2xl flex items-center justify-center gap-3 transform hover:scale-105 transition-transform">
+                    <i data-lucide="download" class="w-5 h-5"></i>
+                    <span>Download</span>
+                </a>
+                <button onclick="closeOverlay()"
+                    class="text-gray-500 hover:text-white transition-colors text-sm font-medium tracking-widest uppercase">
+                    Cancel Process
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="py-20 border-t border-white/5 mt-20">
+        <div class="max-w-5xl mx-auto px-6 text-center">
+            <p class="text-gray-600 text-[10px] tracking-[0.4em] uppercase font-bold">&copy; 2026 ToolsFlash Media
+                Engine. All Rights Reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        lucide.createIcons();
+    </script>
+    <script src="/static/js/main.js"></script>
+</body>
+
+</html>
