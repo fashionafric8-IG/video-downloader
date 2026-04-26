@@ -2,4 +2,6 @@ venv/
 __pycache__/
 *.pyc
 downloads/
-*.logcookies.txt 
+*.log
+cookies.txt
+app.log
