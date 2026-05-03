@@ -44,8 +44,9 @@ def get_video_info(url):
         }
 
         # Include cookiefile if a valid cookies.txt exists
-        if os.path.isfile('cookies.txt') and _is_valid_netscape('cookies.txt'):
-            ydl_opts['cookiefile'] = 'cookies.txt'
+        cookie_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cookies.txt')
+        if os.path.isfile(cookie_path) and _is_valid_netscape(cookie_path):
+            ydl_opts['cookiefile'] = cookie_path
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
@@ -120,8 +121,9 @@ def download_video(url, format_id, output_dir):
     }
     
     # Cookie Logic
-    if os.path.isfile('cookies.txt') and _is_valid_netscape('cookies.txt'):
-        ydl_opts['cookiefile'] = 'cookies.txt'
+    cookie_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cookies.txt')
+    if os.path.isfile(cookie_path) and _is_valid_netscape(cookie_path):
+        ydl_opts['cookiefile'] = cookie_path
     
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
