@@ -12,6 +12,10 @@ const overlayMsg = document.getElementById('overlay-msg');
 const downloadLoader = document.getElementById('download-loader');
 const downloadSuccess = document.getElementById('download-success');
 
+// Dynamic backend URL to support both local testing and VPS production
+const isProduction = window.location.hostname.includes('toolsflash.org');
+const API_BASE_URL = isProduction ? 'https://downloader.toolsflash.org' : '';
+
 async function pasteFromClipboard() {
     try {
         const text = await navigator.clipboard.readText();
@@ -30,7 +34,7 @@ analyzeBtn.addEventListener('click', async () => {
     loading.classList.remove('hidden');
 
     try {
-        const response = await fetch('/analyze', {
+        const response = await fetch(`${API_BASE_URL}/analyze`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ url })
@@ -51,16 +55,16 @@ function renderResults(data, originalUrl) {
     document.getElementById('title').textContent = data.title;
     document.getElementById('thumb').src = data.thumbnail;
     document.getElementById('duration').textContent = data.duration || 'Unknown Duration';
-    
+
     formatsList.innerHTML = '';
-    
+
     // Show top 6 quality formats
     const displayFormats = data.formats.slice(0, 6);
-    
+
     displayFormats.forEach(f => {
         const row = document.createElement('div');
         row.className = 'glass-card rounded-2xl p-5 flex items-center justify-between hover:bg-white/5 transition-all group cursor-pointer';
-        
+
         const badgeColor = f.combined ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' : 'bg-slate-500/10 text-slate-400 border-white/5';
         const badgeText = f.combined ? 'Recommended' : 'Standard';
 
@@ -104,7 +108,7 @@ async function triggerDownload(url, formatId) {
     finalDownloadBtn.classList.add('hidden');
 
     try {
-        const response = await fetch('/download', {
+        const response = await fetch(`${API_BASE_URL}/download`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ url, format_id: formatId })
@@ -119,8 +123,8 @@ async function triggerDownload(url, formatId) {
         overlayTitle.textContent = "Ready";
         overlayMsg.textContent = "Processing complete. Click below to save the playable file to your computer.";
         finalDownloadBtn.textContent = "Download";
-        
-        finalDownloadBtn.href = `/serve/${encodeURIComponent(data.filename)}`;
+
+        finalDownloadBtn.href = `${API_BASE_URL}/serve/${encodeURIComponent(data.filename)}`;
         finalDownloadBtn.classList.remove('hidden');
     } catch (err) {
         overlayTitle.textContent = "Process Failed";

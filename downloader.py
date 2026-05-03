@@ -38,7 +38,9 @@ def get_video_info(url):
             'noplaylist': True,
             'nocheckcertificate': True,
             'geo_bypass': True,
-            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'socket_timeout': 15,
+            'source_address': '0.0.0.0', # Force IPv4
+            'extractor_args': {'youtube': ['player_client=ios,android,web']},
         }
 
         # Include cookiefile if a valid cookies.txt exists
@@ -57,6 +59,12 @@ def get_video_info(url):
             for f in info['formats']:
                 vcodec = f.get('vcodec')
                 acodec = f.get('acodec')
+                
+                # Filter out AV1 codecs because they cause playback issues on many devices (especially for FB Reels)
+                if vcodec:
+                    vc = vcodec.lower()
+                    if vc.startswith('av01') or vc.startswith('av1'):
+                        continue
                 
                 # Filter for meaningful formats
                 if vcodec != 'none' or acodec != 'none':
@@ -97,7 +105,7 @@ def download_video(url, format_id, output_dir):
     os.makedirs(output_dir, exist_ok=True)
     
     ydl_opts = {
-        'format': format_id if format_id else 'bestvideo*+bestaudio/best',
+        'format': format_id if format_id else 'bv*[ext=mp4][vcodec^=avc]+ba[ext=m4a]/b[ext=mp4]/best',
         'merge_output_format': 'mp4',
         'outtmpl': os.path.join(output_dir, '%(title).100s [%(id)s].%(ext)s'),
         'restrict_filenames': True,
@@ -105,8 +113,10 @@ def download_video(url, format_id, output_dir):
         'quiet': True,
         'nocheckcertificate': True,
         'geo_bypass': True,
+        'socket_timeout': 30,
+        'source_address': '0.0.0.0', # Force IPv4
         'max_filesize': 100 * 1024 * 1024,  # Limit to 100MB for VPS safety
-        'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'extractor_args': {'youtube': ['player_client=ios,android,web']},
     }
     
     # Cookie Logic

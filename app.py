@@ -12,12 +12,13 @@ from werkzeug.exceptions import HTTPException
 from downloader import get_video_info, download_video
 
 # Setup logging
+import sys
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] %(message)s',
     handlers=[
-        logging.FileHandler('app.log'),
-        logging.StreamHandler()
+        logging.FileHandler('app.log', encoding='utf-8', errors='replace'),
+        logging.StreamHandler(sys.stdout)
     ]
 )
 # Fixed the logging handler name error below in implementation
@@ -25,14 +26,15 @@ logging.basicConfig(
 from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}})
+CORS(app, resources={
+    r"/*": {
+        "origins": [
+            "https://toolsflash.org",
+            "https://www.toolsflash.org"
+        ]
+    }
+})
 
-@app.after_request
-def after_request(response):
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-    return response
 
 # Allow routes with or without trailing slashes to avoid HTML redirects
 app.url_map.strict_slashes = False
